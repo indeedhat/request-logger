@@ -3,14 +3,26 @@ package main
 import (
 	"log"
 	"net"
+	"os"
+	"sync"
 )
 
 var response = `HTTP/1.1 200 OK
 
 `
 
+var reqMux sync.Mutex
+
 func main() {
-	soc, err := net.Listen("tcp", ":8080")
+	fh, err := os.OpenFile("request.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer fh.Close()
+
+	log.SetOutput(fh)
+
+	soc, err := net.Listen("tcp", ":8084")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,6 +49,10 @@ func handle(con net.Conn) {
 		return
 	}
 
+	reqMux.Lock()
+	defer reqMux.Unlock()
+
 	log.Println(string(buf))
+
 	con.Write([]byte(response))
 }
